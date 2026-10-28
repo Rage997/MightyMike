@@ -83,7 +83,9 @@ static void DeleteTextAtRowCol(int row, int col);
 static const char* GetKeyBindingName(int row, int col);
 static const char* GetPadBindingName(int row, int col);
 static void OnDone(void);
+#ifndef __EMSCRIPTEN__
 static void OnChangeFullscreenMode(void);
+#endif
 static void OnChangePlayfieldSizeViaSettings(void);
 static void OnChangeDebugInfoInTitleBar(void);
 static void OnResetKeys(void);
@@ -146,6 +148,7 @@ static MenuItem gVideoMenu[] =
 			.choices = { "32 fps, like original", "smooth" },
 		}
 	},
+#ifndef __EMSCRIPTEN__
 	{ .type = kMenuItem_Separator },
 	{
 		.type = kMenuItem_Cycler, .cycler =
@@ -216,6 +219,7 @@ static MenuItem gVideoMenu[] =
 		}
 	},
 
+#endif
 	{ .type = kMenuItem_Separator },
 
 #if EXPOSE_DITHERING
@@ -483,6 +487,7 @@ static void RemapRedToGray(int row)
 
 static void OnMenuEntered(void)
 {
+#ifndef __EMSCRIPTEN__
 	if (gMenu == gVideoMenu)
 	{
 		{
@@ -505,6 +510,7 @@ static void OnMenuEntered(void)
 			gMenu[row].cycler.numChoices = numDisplays;
 		}
 	}
+#endif
 }
 
 /****************************/
@@ -545,10 +551,12 @@ static void OnDone(void)
 	}
 }
 
+#ifndef __EMSCRIPTEN__
 static void OnChangeFullscreenMode(void)
 {
 	SetFullscreenMode(true);
 }
+#endif
 
 static void OnChangePlayfieldSizeViaSettings(void)
 {

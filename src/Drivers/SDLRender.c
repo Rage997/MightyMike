@@ -107,6 +107,9 @@ void SDLRender_InitTexture(void)
 			VISIBLE_HEIGHT * textureSizeMultiplier);
 	GAME_ASSERT(gSDLTexture);
 
+	// This is an opaque framebuffer. The dithering filter only writes RGB.
+	CHECK_SDL_ERROR(SDL_SetTextureBlendMode(gSDLTexture, SDL_BLENDMODE_NONE));
+
 	// Set scaling quality
 	SDL_SetTextureScaleMode(gSDLTexture, crisp ? SDL_SCALEMODE_NEAREST : SDL_SCALEMODE_LINEAR);
 

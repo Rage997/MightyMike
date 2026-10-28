@@ -3,6 +3,7 @@
 - **3.0.3 (NOT RELEASED YET)**
 
     - Updated to SDL 3
+    - Added a web port.
     - **NOTE:** The Mac version now requires macOS 10.13.
 
 - **3.0.2 hotfix for Windows only (Feb. 5, 2023)**

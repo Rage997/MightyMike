@@ -6,6 +6,8 @@ It was initially published in 1995 under the name **Power Pete**.
 
 **Download the game for macOS, Windows or Linux here:** https://github.com/jorio/MightyMike/releases
 
+**[Play Mighty Mike in your browser](https://niccolozuppichini.com/MightyMike/)**
+
 ![Screenshot](docs/screenshot.png)
 
 ## About this update
@@ -19,7 +21,7 @@ It does bring a few enhancements, such as:
 
 ## Documentation
 
-- [BUILD.md](BUILD.md) — How to build on macOS, Windows or Linux.
+- [BUILD.md](BUILD.md) — How to build on macOS, Windows or Linux, or [play a local browser build](BUILD.md#local-browser-build-webassembly).
 - [CHANGELOG.md](CHANGELOG.md) — Mighty Mike version history.
 - [LICENSE.md](LICENSE.md) — Licensing information (see also below).
 - [Instructions.pdf](docs/Instructions.pdf) — Mighty Mike 2.0 instruction manual.

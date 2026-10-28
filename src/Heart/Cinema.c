@@ -26,6 +26,9 @@
 #include "externs.h"
 #include "weapon.h"
 #include "font.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 static void DoDifficultyScreen(void);
 
@@ -705,6 +708,9 @@ long		count;
 
 	iErr = FSClose(refNum);
 	GAME_ASSERT(iErr == noErr);
+#ifdef __EMSCRIPTEN__
+	EM_ASM({ Module['persist'](); });
+#endif
 }
 
 

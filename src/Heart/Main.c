@@ -31,6 +31,9 @@
 #include "externs.h"
 #include "framebufferfilter.h"
 #include <SDL3/SDL.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 /****************************/
 /*    CONSTANTS             */
@@ -893,6 +896,9 @@ SaveGameFile	saveGame;
 	iErr = FSClose(fRefNum);
 	if (iErr != noErr)
 		DoAlert("Cannot Close Player Save File.  Disk may be locked or full.");
+#ifdef __EMSCRIPTEN__
+	EM_ASM({ Module['persist'](); });
+#endif
 }
 
 
@@ -1368,6 +1374,9 @@ long				count;
 	count = sizeof(PrefsType);
 	FSWrite(refNum, &count, (Ptr)&gGamePrefs);
 	FSClose(refNum);
+#ifdef __EMSCRIPTEN__
+	EM_ASM({ Module['persist'](); });
+#endif
 }
 
 

@@ -2,7 +2,12 @@
 #include "input.h"
 #include <SDL3/SDL.h>
 
-#if __APPLE__
+#if defined(__EMSCRIPTEN__)
+// Avoid browser-reserved Alt+arrow and Ctrl+key combinations.
+#define SC_NWEAPON2		SDL_SCANCODE_E
+#define SC_PWEAPON2		SDL_SCANCODE_Q
+#define SC_ATTACK2		0
+#elif __APPLE__
 #define SC_NWEAPON2		SDL_SCANCODE_LGUI
 #define SC_PWEAPON2		SDL_SCANCODE_RGUI
 #define SC_ATTACK2		0						// on macos, ctrl+arrows is reserved by the OS by default

@@ -86,8 +86,13 @@ void InitRenderThreads(void)
 	GAME_ASSERT(!gCondition_GetToWork);
 	GAME_ASSERT(!gCondition_AllThreadsReady);
 
+#ifdef __EMSCRIPTEN__
+	// Use the existing single-thread conversion path without SharedArrayBuffer.
+	gNumThreads = 1;
+#else
 	gNumThreads = SDL_GetNumLogicalCPUCores();
 	gNumThreads = SDL_clamp(gNumThreads, 1, MAX_RENDER_THREADS);
+#endif
 	SDL_Log("Render thread pool: %d", gNumThreads);
 
 	if (gNumThreads <= 1)	// single-threaded rendering: don't create extra threads

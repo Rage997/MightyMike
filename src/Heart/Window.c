@@ -21,6 +21,16 @@
 #include "renderdrivers.h"
 #include "version.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+EM_ASYNC_JS(void, WebPresentFrame, (), {
+	await new Promise(resolve => requestAnimationFrame(resolve));
+	while (Module['webSuspended'])
+		await new Promise(resolve => setTimeout(resolve, 100));
+});
+#endif
+
 /****************************/
 /*    PROTOTYPES            */
 /****************************/
@@ -471,6 +481,11 @@ void PresentIndexedFramebuffer(void)
 	SDLRender_PresentFramebuffer();
 #endif
 
+#ifdef __EMSCRIPTEN__
+	// Nested game/menu loops must release the browser thread to present and handle input.
+	WebPresentFrame();
+#endif
+
 	//-------------------------------------------------------------------------
 	// Update debug info
 
@@ -542,6 +557,13 @@ void MoveToPreferredDisplay(void)
 
 void SetFullscreenMode(bool enforceDisplayPref)
 {
+#ifdef __EMSCRIPTEN__
+	// Fullscreen is owned by the launcher's user-gesture handler.
+	(void)enforceDisplayPref;
+	gGamePrefs.displayMode = kDisplayMode_Windowed;
+	SetOptimalWindowSize();
+	OnChangeIntegerScaling();
+#else
 	if (gGamePrefs.displayMode == kDisplayMode_Windowed)
 	{
 		SDL_SetWindowFullscreen(gSDLWindow, false);
@@ -579,6 +601,7 @@ void SetFullscreenMode(bool enforceDisplayPref)
 		SDL_ShowCursor();
 	else
 		SDL_HideCursor();
+#endif
 }
 
 int GetNumDisplays(void)
@@ -611,6 +634,10 @@ int GetMaxIntegerZoomForPreferredDisplay(void)
 
 void SetOptimalWindowSize(void)
 {
+#ifdef __EMSCRIPTEN__
+	// Match the canvas's CSS size, rather than the desktop monitor dimensions.
+	EM_ASM({ Module['_WebResize'](window.innerWidth, window.innerHeight); });
+#else
 	SDL_DisplayID display = GetPreferredSDLDisplayID();
 	SDL_WindowFlags windowFlags = SDL_GetWindowFlags(gSDLWindow);
 	SDL_RestoreWindow(gSDLWindow);
@@ -635,6 +662,7 @@ void SetOptimalWindowSize(void)
 	{
 		SDL_MaximizeWindow(gSDLWindow);
 	}
+#endif
 }
 
 static int GetEffectiveScalingType(void)

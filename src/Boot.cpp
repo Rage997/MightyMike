@@ -4,6 +4,9 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include "Pomme.h"
 #include "PommeFiles.h"
@@ -15,6 +18,9 @@ extern "C"
 	#include "renderdrivers.h"
 	#include "framebufferfilter.h"
 	#include "version.h"
+	#include "input.h"
+	#include "sound2.h"
+	#include "window.h"
 
 	SDL_Window* gSDLWindow = nullptr;
 	FSSpec gDataSpec;
@@ -88,6 +94,12 @@ static void Boot(int argc, char** argv)
 	SDL_SetLogPriorities(SDL_LOG_PRIORITY_INFO);
 #endif
 
+#ifdef __EMSCRIPTEN__
+	// The launcher restores this IDBFS mount before starting the game.
+	setenv("XDG_CONFIG_HOME", "/storage", 1);
+	SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#canvas");
+#endif
+
 	// Start our "machine"
 	Pomme::Init();
 
@@ -147,6 +159,27 @@ static void Shutdown()
 	SDL_Quit();
 }
 
+#ifdef __EMSCRIPTEN__
+extern "C" EMSCRIPTEN_KEEPALIVE void WebClearInput(void)
+{
+	SDL_ResetKeyboard();
+	ClearInput();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void WebSuspend(int suspended)
+{
+	EM_ASM({ Module['webSuspended'] = !!$0; }, suspended);
+	PauseAllChannels(suspended || gIsGamePaused);
+	WebClearInput();
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void WebResize(int width, int height)
+{
+	if (!gSDLWindow || width < 1 || height < 1) return;
+	SDL_SetWindowSize(gSDLWindow, width, height);
+}
+#endif
+
 int main(int argc, char** argv)
 {
 	bool success = true;
@@ -181,8 +214,18 @@ int main(int argc, char** argv)
 	if (!success)
 	{
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Uncaught exception: %s", uncaught.c_str());
+#ifdef __EMSCRIPTEN__
+		EM_ASM({ Module['reportError'](UTF8ToString($0)); }, uncaught.c_str());
+#else
 		SDL_ShowSimpleMessageBox(0, GAME_FULL_NAME, uncaught.c_str(), nullptr);
+#endif
 	}
+
+#ifdef __EMSCRIPTEN__
+	// Asyncify's resumed main does not reliably trigger the runtime's onExit.
+	// Keep the runtime alive for the final asynchronous filesystem flush.
+	EM_ASM({ Module['onExit'](); });
+#endif
 
 	return success ? 0 : 1;
 }

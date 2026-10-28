@@ -62,7 +62,7 @@ add_compile_definitions(POMME_CASE_SENSITIVE_FSSPEC=1)
 
 # If SDL3_DIR wasn't specified, discover if the user put some prebuilt SDL3
 # package in the 'extern' directory
-if(NOT DEFINED SDL3_DIR)
+if(NOT EMSCRIPTEN AND NOT DEFINED SDL3_DIR)
 	if(APPLE)
 		set(_sdl3_maybe "${CMAKE_SOURCE_DIR}/extern/SDL3.framework/Resources/CMake")
 	elseif(WIN32)
@@ -78,7 +78,19 @@ if(NOT DEFINED SDL3_DIR)
 	unset(_sdl3_maybe)
 endif()
 
-if(NOT BUILD_SDL_FROM_SOURCE)
+if(EMSCRIPTEN)
+	include(FetchContent)
+	set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+	set(SDL_STATIC ON CACHE BOOL "" FORCE)
+	set(SDL_PTHREADS OFF CACHE BOOL "" FORCE)
+	set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+	set(SDL_TESTS OFF CACHE BOOL "" FORCE)
+	set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+	FetchContent_Declare(SDL3
+		GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+		GIT_TAG 7f3ae3d57459e59943a4ecfefc8f6277ec6bf540) # release-3.2.28, shared with Nanosaur
+	FetchContent_MakeAvailable(SDL3)
+elseif(NOT BUILD_SDL_FROM_SOURCE)
 	find_package(SDL3 CONFIG REQUIRED)
 	message("Found pre-built SDL3")
 else()
@@ -95,7 +107,9 @@ endif()
 
 add_subdirectory(extern/Pomme)
 
-find_package(OpenGL REQUIRED)  # only actually required if we want to force GLRENDER
+if(NOT EMSCRIPTEN)
+	find_package(OpenGL REQUIRED)
+endif()
 
 #------------------------------------------------------------------------------
 # EXECUTABLE TARGET
@@ -129,7 +143,7 @@ target_include_directories(${GAME_TARGET} PRIVATE ${GAME_SRCDIR}/Headers)
 
 add_compile_definitions(
 	"$<$<CONFIG:DEBUG>:_DEBUG>"
-	GLRENDER    # Mighty Mike only (comment out to use SDL's 2D renderer)
+	"$<$<NOT:$<BOOL:${EMSCRIPTEN}>>:GLRENDER>"
 	#NOVSYNC    # Mighty Mike only
 )
 
@@ -210,7 +224,33 @@ else()
 endif()
 
 # Link core dependencies
-target_link_libraries(${GAME_TARGET} PRIVATE Pomme OpenGL::GL)
+target_link_libraries(${GAME_TARGET} PRIVATE Pomme)
+if(EMSCRIPTEN)
+	configure_file(packaging/MightyMike512.png "${CMAKE_CURRENT_BINARY_DIR}/MightyMike.png" COPYONLY)
+	foreach(WEB_LAUNCHER_ASSET mac-background.webp mightymike-splash.png crt-mask.png)
+		configure_file("packaging/web-assets/${WEB_LAUNCHER_ASSET}"
+			"${CMAKE_CURRENT_BINARY_DIR}/web-assets/${WEB_LAUNCHER_ASSET}" COPYONLY)
+	endforeach()
+	set_target_properties(${GAME_TARGET} PROPERTIES SUFFIX ".html")
+	target_link_options(${GAME_TARGET} PRIVATE
+		-fexceptions
+		-sASYNCIFY
+		-sASYNCIFY_STACK_SIZE=131072
+		-sALLOW_MEMORY_GROWTH=1
+		-sSTACK_SIZE=1048576
+		-sEXIT_RUNTIME=0
+		"-sEXPORTED_RUNTIME_METHODS=['callMain','FS','IDBFS','addRunDependency','removeRunDependency']"
+		-lidbfs.js
+		"SHELL:--preload-file ${GAME_DATADIR}@/Data"
+		"SHELL:--shell-file ${CMAKE_SOURCE_DIR}/packaging/web.html")
+	set_property(TARGET ${GAME_TARGET} APPEND PROPERTY LINK_DEPENDS
+		"${CMAKE_SOURCE_DIR}/packaging/web.html")
+	file(GLOB_RECURSE WEB_ASSETS CONFIGURE_DEPENDS "${GAME_DATADIR}/*")
+	set_property(TARGET ${GAME_TARGET} APPEND PROPERTY LINK_DEPENDS ${WEB_ASSETS})
+	configure_file(LICENSE.md web-license.txt COPYONLY)
+else()
+	target_link_libraries(${GAME_TARGET} PRIVATE OpenGL::GL)
+endif()
 
 # Add required frameworks for KillMacMouseAcceleration
 if(APPLE)
@@ -283,8 +323,10 @@ else()
 	set(GAME_DATA_TARGET_LOCATION "$<TARGET_FILE_DIR:${GAME_TARGET}>/Data")
 endif()
 
-add_custom_command(TARGET ${GAME_TARGET} POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory "${GAME_DATADIR}" "${GAME_DATA_TARGET_LOCATION}")
+if(NOT EMSCRIPTEN)
+	add_custom_command(TARGET ${GAME_TARGET} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_directory "${GAME_DATADIR}" "${GAME_DATA_TARGET_LOCATION}")
+endif()
 
 if(APPLE)
 	set(INFO_PLIST "${GAME_DATA_TARGET_LOCATION}/../Info.plist")
