@@ -4,6 +4,7 @@
 
     - Updated to SDL 3
     - Added a web port.
+    - Added automatic web builds and GitHub Pages deployment from `master`.
     - **NOTE:** The Mac version now requires macOS 10.13.
 
 - **3.0.2 hotfix for Windows only (Feb. 5, 2023)**
